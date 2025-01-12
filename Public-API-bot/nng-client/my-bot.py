@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import time
 from datetime import datetime
 from typing import Union
@@ -7,8 +9,19 @@ from proto import spapi_pb2
 from constants import PROTOCOL, ADDRESS, CLIENT_PORT
 from sidepit_nng_client import SidepitClient
 
+from dotenv import load_dotenv
+import os
+
+
+
 
 def main() -> None:
+
+    load_dotenv()
+    sidepit_id = os.getenv("SIDEPIT-ID")
+    secret_key = os.getenv("SIDEPIT-SECRET")
+
+
     server_address = f"{PROTOCOL}{ADDRESS}:{CLIENT_PORT}"
     client = SidepitClient(server_address)
 
