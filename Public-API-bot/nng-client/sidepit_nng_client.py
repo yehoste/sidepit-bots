@@ -29,9 +29,11 @@ Usage:
 import time
 from datetime import datetime
 from typing import Union
-
+from hashlib import sha256
 import pynng
-from proto import spapi_pb2
+# from proto import spapi_pb2
+import proto.spapi_pb2 as spapi_pb2
+# Ensure that spapi_pb2.py is generated from the .proto file and contains the Transaction class
 from constants import PROTOCOL, ADDRESS, CLIENT_PORT
 
 class SidepitClient:
@@ -46,9 +48,30 @@ class SidepitClient:
         self.socket = pynng.Pair0()
         self.socket.dial(self.server_address)
 
-    def create_transaction_message(
-        self, user_id: bytes, user_signature: bytes
-    ) -> spapi_pb2.Transaction:
+    # def create_transaction_message(
+    #     self, user_id: bytes, user_signature: bytes
+    # ) -> spapi_pb2.Transaction:
+    #     """
+    #     Create a new Transaction message.
+
+    #     Args:
+    #         user_id (bytes): The ID of the user.
+    #         user_signature (bytes): The signature of the user.
+
+    #     Returns:
+    #         spapi_pb2.Transaction: The created Transaction message.
+    #     """
+    #     transaction_msg = spapi_pb2.Transaction()
+    #     transaction_msg.version = 1
+    #     transaction_msg.timestamp = int(time.time() * 1e9)  # Nano seconds
+    #     transaction_msg.id = user_id  # User ID bytes
+    #     transaction_msg.signature = user_signature  # User signature bytes
+    #     return transaction_msg
+    
+
+
+
+    def create_transaction_message(self,user_id) -> spapi_pb2.SignedTransaction:
         """
         Create a new Transaction message.
 
@@ -57,14 +80,23 @@ class SidepitClient:
             user_signature (bytes): The signature of the user.
 
         Returns:
-            spapi_pb2.Transaction: The created Transaction message.
+            sidepit_api_pb2.Transaction: The created Transaction message.
         """
-        transaction_msg = spapi_pb2.Transaction()
+        signedTransaction = spapi_pb2.SignedTransaction()
+        transaction_msg = signedTransaction.transaction  
         transaction_msg.version = 1
-        transaction_msg.timestamp = int(time.time() * 1e9)  # Nano seconds
-        transaction_msg.id = user_id  # User ID bytes
-        transaction_msg.signature = user_signature  # User signature bytes
-        return transaction_msg
+        transaction_msg.timestamp = int(time.time() * 1e9)   
+        transaction_msg.sidepit_id = user_id 
+
+        return signedTransaction
+
+
+    def sign_digest(self, tx):
+        digest = sha256(tx.SerializeToString()).digest() 
+        hexsig = self.idmanager.sign_it(digest); 
+        return hexsig
+
+
 
     def send_message(self, message: Union[spapi_pb2.Transaction, bytes]) -> None:
         """
@@ -102,13 +134,15 @@ class SidepitClient:
             user_id (bytes): The ID of the user.
             user_signature (bytes): The signature of the user.
         """
-        transaction_msg = self.create_transaction_message(user_id, user_signature)
-        new_order = transaction_msg.new_order
+        stx = self.create_transaction_message()
+        new_order = stx.transaction.new_order
         new_order.side = side
         new_order.size = size
         new_order.price = price
-        new_order.symbol = symbol
-        self.send_message(transaction_msg)
+        new_order.ticker = symbol
+
+        stx.signature = self.sign_digest(stx.transaction)
+        self.send_message(stx)
 
     def send_cancel_order(
         self, order_id: bytes, user_id: bytes, user_signature: bytes
