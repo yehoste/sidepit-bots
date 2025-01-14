@@ -31,6 +31,9 @@ from datetime import datetime
 from typing import Union
 from hashlib import sha256
 import pynng
+import hashlib
+import base58
+from secp256k1 import PrivateKey
 # from proto import spapi_pb2
 import proto.spapi_pb2 as spapi_pb2
 # Ensure that spapi_pb2.py is generated from the .proto file and contains the Transaction class
@@ -89,13 +92,50 @@ class SidepitClient:
         transaction_msg.sidepit_id = user_id 
 
         return signedTransaction
+    
+
+    def sign_it(self, digest, wif):
+        priv = PrivateKey(self.wif_to_private_key(wif), False)
+        sig = priv.ecdsa_sign(digest,True)
+        return priv.ecdsa_serialize_compact(sig).hex()
 
 
-    def sign_digest(self, tx):
+    def sign_digest(self, tx, wif):
         digest = sha256(tx.SerializeToString()).digest() 
-        hexsig = self.idmanager.sign_it(digest); 
+        hexsig = self.sign_it(digest, wif); 
         return hexsig
 
+
+    def wif_to_private_key(self, wif):
+        # Step 1: Decode the WIF string from Base58
+        decoded = base58.b58decode(wif)
+        
+        # Step 2: Separate the components
+        # - First byte is the version byte
+        # - Last 4 bytes are the checksum
+        # - The remaining bytes are the private key (and possibly a compression flag)
+        checksum = decoded[-4:]
+        key_with_optional_compression = decoded[1:-4]
+        
+        # Step 3: Calculate checksum of the decoded key and compare to the last 4 bytes
+        hash1 = hashlib.sha256(decoded[:-4]).digest()
+        hash2 = hashlib.sha256(hash1).digest()
+        if hash2[:4] != checksum:
+            raise ValueError("Invalid WIF checksum")
+        
+        # Step 4: Determine if the private key is compressed by checking the last byte
+        if key_with_optional_compression[-1] == 0x01:
+            # Remove the compression byte to get the raw private key
+            private_key = key_with_optional_compression[:-1]
+            compressed = True
+        else:
+            private_key = key_with_optional_compression
+            compressed = False
+        
+        # Step 5: Convert the private key to hexadecimal format
+        private_key_hex = private_key.hex()
+        
+        return private_key_hex
 
 
     def send_message(self, message: Union[spapi_pb2.Transaction, bytes]) -> None:
@@ -120,8 +160,8 @@ class SidepitClient:
         size: int,
         price: int,
         symbol: str,
-        user_id: bytes,
-        user_signature: bytes,
+        user_id,
+        wif,
     ) -> None:
         """
         Send a new order message.
@@ -134,14 +174,14 @@ class SidepitClient:
             user_id (bytes): The ID of the user.
             user_signature (bytes): The signature of the user.
         """
-        stx = self.create_transaction_message()
+        stx = self.create_transaction_message(user_id)
         new_order = stx.transaction.new_order
         new_order.side = side
         new_order.size = size
         new_order.price = price
         new_order.ticker = symbol
 
-        stx.signature = self.sign_digest(stx.transaction)
+        stx.signature = self.sign_digest(stx.transaction,wif)
         self.send_message(stx)
 
     def send_cancel_order(

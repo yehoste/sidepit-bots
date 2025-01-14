@@ -31,22 +31,22 @@ def main() -> None:
         size=10,
         price=100,
         symbol="BTCUSD",
-        user_id=b"user_id",
-        user_signature=b"user_signature",
+        user_id=sidepit_id,
+        wif=secret_key,
     )
-    client.send_cancel_order(
-        order_id=b"order_id",
-        user_id=b"user_id",
-        user_signature=b"user_signature",
-    )
-    client.send_auction_bid(
-        epoch=1234567890,
-        hash_value="hash_value",
-        ordering_salt="ordering_salt_value",
-        bid=500,
-        user_id=b"user_id",
-        user_signature=b"user_signature",
-    )
+    # client.send_cancel_order(
+    #     order_id=b"order_id",
+    #     user_id=b"user_id",
+    #     user_signature=b"user_signature",
+    # )
+    # client.send_auction_bid(
+    #     epoch=1234567890,
+    #     hash_value="hash_value",
+    #     ordering_salt="ordering_salt_value",
+    #     bid=500,
+    #     user_id=b"user_id",
+    #     user_signature=b"user_signature",
+    # )
 
     client.close_connection()
 
