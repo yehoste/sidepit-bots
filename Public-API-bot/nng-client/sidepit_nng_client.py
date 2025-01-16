@@ -48,7 +48,7 @@ class SidepitClient:
             server_address (str): The address of the server to connect to.
         """
         self.server_address = server_address
-        self.socket = pynng.Pair0()
+        self.socket = pynng.Push0()
         self.socket.dial(self.server_address)
 
     # def create_transaction_message(
@@ -138,14 +138,14 @@ class SidepitClient:
         return private_key_hex
 
 
-    def send_message(self, message: Union[spapi_pb2.Transaction, bytes]) -> None:
+    def send_message(self, message: Union[spapi_pb2.SignedTransaction, bytes]) -> None:
         """
         Send a message over the socket.
 
         Args:
-            message (Union[spapi_pb2.Transaction, bytes]): The message to send.
+            message (Union[sidepit_api_pb2.Transaction, bytes]): The message to send.
         """
-        if isinstance(message, spapi_pb2.Transaction):
+        if isinstance(message, spapi_pb2.SignedTransaction):
             serialized_msg = message.SerializeToString()
         elif isinstance(message, bytes):
             serialized_msg = message
@@ -156,7 +156,7 @@ class SidepitClient:
 
     def send_new_order(
         self,
-        side: bool,
+        side: int,
         size: int,
         price: int,
         symbol: str,
@@ -185,8 +185,7 @@ class SidepitClient:
         self.send_message(stx)
 
     def send_cancel_order(
-        self, order_id: bytes, user_id: bytes, user_signature: bytes
-    ) -> None:
+        self, order_id: bytes, user_id: bytes) -> None:
         """
         Send a cancel order message.
 
@@ -195,9 +194,47 @@ class SidepitClient:
             user_id (bytes): The ID of the user.
             user_signature (bytes): The signature of the user.
         """
-        transaction_msg = self.create_transaction_message(user_id, user_signature)
-        transaction_msg.cancel_orderid = order_id
-        self.send_message(transaction_msg)
+
+        stx = self.create_transaction_message(user_id)
+        stx.transaction.cancel_orderid = order_id
+        stx.signature = self.sign_digest(stx.transaction)
+        self.send_message(stx)
+        return  stx.transaction.sidepit_id + ":" + str(stx.transaction.timestamp)
+
+    # def send_auction_bid(
+    #     self,
+    #     epoch: int,
+    #     hash_value: str,
+    #     ordering_salt: str,
+    #     bid: int,
+    #     user_id: bytes,
+    #     user_signature: bytes,
+    # ) -> None:
+    #     """
+    #     Send an auction bid message.
+
+    #     Args:
+    #         epoch (int): The epoch time of the bid.
+    #         hash_value (str): The hash value.
+    #         ordering_salt (str): The ordering salt.
+    #         bid (int): The bid value in satoshis.
+    #         user_id (bytes): The ID of the user.
+    #         user_signature (bytes): The signature of the user.
+    #     """
+    #     transaction_msg = self.create_transaction_message(user_id, user_signature)
+    #     auction_bid = transaction_msg.auction_bid
+    #     auction_bid.epoch = epoch
+    #     auction_bid.hash = hash_value
+    #     auction_bid.ordering_salt = ordering_salt
+    #     auction_bid.bid = bid
+    #     self.send_message(transaction_msg)
+
+    def close_connection(self) -> None:
+        """
+        Close the connection to the server.
+        """
+        self.socket.close()
+
 
     def send_auction_bid(
         self,
@@ -206,7 +243,7 @@ class SidepitClient:
         ordering_salt: str,
         bid: int,
         user_id: bytes,
-        user_signature: bytes,
+        wif
     ) -> None:
         """
         Send an auction bid message.
@@ -219,19 +256,17 @@ class SidepitClient:
             user_id (bytes): The ID of the user.
             user_signature (bytes): The signature of the user.
         """
-        transaction_msg = self.create_transaction_message(user_id, user_signature)
-        auction_bid = transaction_msg.auction_bid
+
+        stx = self.create_transaction_message(user_id)
+        auction_bid = stx.transaction.auction_bid
         auction_bid.epoch = epoch
         auction_bid.hash = hash_value
         auction_bid.ordering_salt = ordering_salt
         auction_bid.bid = bid
-        self.send_message(transaction_msg)
 
-    def close_connection(self) -> None:
-        """
-        Close the connection to the server.
-        """
-        self.socket.close()
+        stx.signature = self.sign_digest(stx.transaction,wif)
+        self.send_message(stx)
+        return  stx.transaction.sidepit_id + ":" + str(stx.transaction.timestamp)
 
 
 def main() -> None:
