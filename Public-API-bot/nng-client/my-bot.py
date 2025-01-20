@@ -29,9 +29,9 @@ def main() -> None:
 
     # Example usage
     orderid=client.send_new_order(
-        side=1,
+        side=-1,
         size=1,
-        price=1000,
+        price=900,
         symbol="USDBTCH25",
         user_id=sidepit_id,
         wif=secret_key,
@@ -40,8 +40,8 @@ def main() -> None:
     print(f"Sent new order with order id: {orderid}")
 
     cancelorderid=client.send_cancel_order(
-        order_id="",
-        user_id=b"",
+        order_id=orderid,
+        user_id=b"bc1qwmt5n3v0z37wcz8f6qndw0weq3xgxnqunz67m7",
         wif=secret_key,
     )
 
