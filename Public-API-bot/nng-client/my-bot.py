@@ -41,7 +41,7 @@ def main() -> None:
 
     cancelorderid=client.send_cancel_order(
         order_id=orderid,
-        user_id=b"bc1qwmt5n3v0z37wcz8f6qndw0weq3xgxnqunz67m7",
+        user_id=b"user_id",
         wif=secret_key,
     )
 
