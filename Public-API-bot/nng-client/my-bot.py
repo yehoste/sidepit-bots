@@ -41,7 +41,7 @@ def main() -> None:
 
     cancelorderid=client.send_cancel_order(
         order_id=orderid,
-        user_id=b"user_id",
+        user_id=sidepit_id,
         wif=secret_key,
     )
 
