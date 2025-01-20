@@ -74,7 +74,7 @@ class SidepitClient:
 
 
 
-    def create_transaction_message(self,user_id) -> spapi_pb2.SignedTransaction:
+    def create_transaction_message(self,user_id: bytes) -> spapi_pb2.SignedTransaction:
         """
         Create a new Transaction message.
 
@@ -185,7 +185,7 @@ class SidepitClient:
         self.send_message(stx)
 
     def send_cancel_order(
-        self, order_id: bytes, user_id: bytes) -> None:
+        self, order_id: bytes, user_id, wif) -> None:
         """
         Send a cancel order message.
 
@@ -197,7 +197,7 @@ class SidepitClient:
 
         stx = self.create_transaction_message(user_id)
         stx.transaction.cancel_orderid = order_id
-        stx.signature = self.sign_digest(stx.transaction)
+        stx.signature = self.sign_digest(stx.transaction,wif)
         self.send_message(stx)
         return  stx.transaction.sidepit_id + ":" + str(stx.transaction.timestamp)
 

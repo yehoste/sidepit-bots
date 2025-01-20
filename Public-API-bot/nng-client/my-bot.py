@@ -28,19 +28,19 @@ def main() -> None:
     print(f"Connected to server at {server_address}")
 
     # Example usage
-    client.send_new_order(
-        side=1,
-        size=1,
-        price=1000,
-        symbol="USDBTCH25",
-        user_id=sidepit_id,
+    # client.send_new_order(
+    #     side=1,
+    #     size=1,
+    #     price=1000,
+    #     symbol="USDBTCH25",
+    #     user_id=sidepit_id,
+    #     wif=secret_key,
+    # )
+    client.send_cancel_order(
+        order_id=b"order_id",
+        user_id=b"user_id",
         wif=secret_key,
     )
-    # client.send_cancel_order(
-    #     order_id=b"order_id",
-    #     user_id=b"user_id",
-    #     user_signature=b"user_signature",
-    # )
     # client.send_auction_bid(
     #     epoch=1234567890,
     #     hash_value="hash_value",
